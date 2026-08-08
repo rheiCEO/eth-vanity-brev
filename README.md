@@ -4,15 +4,14 @@ CUDA Ethereum vanity address generator, ready for **[NVIDIA Brev](https://brev.n
 
 Based on [manuelinfosec/eth-vanity-cuda](https://github.com/manuelinfosec/eth-vanity-cuda) (AGPL-3.0).
 
-## NVIDIA Brev — szybki start
+## NVIDIA Brev — quick start
 
 ### 1. Create Environment
-1. Wejdź na https://brev.nvidia.com/environment/
-2. Wybierz GPU (np. **L40S**)
-3. **VM Mode** (Python + CUDA + Docker)
-4. Jupyter: **OFF** (niepotrzebny)
-5. **Run a Setup Script: ON** → wklej zawartość pliku [`brev-setup.sh`](brev-setup.sh)  
-   albo krócej:
+1. Open https://brev.nvidia.com/environment/
+2. Pick a GPU (e.g. **L40S**)
+3. Mode: **VM Mode** (Python + CUDA + Docker)
+4. Jupyter: **OFF**
+5. **Run a Setup Script: ON** — paste [`brev-paste.sh`](brev-paste.sh):
 
 ```bash
 #!/bin/bash
@@ -23,65 +22,60 @@ cd eth-vanity-brev
 bash brev-setup.sh
 ```
 
-6. Deploy → poczekaj aż VM wstanie (~2–3 min)
+6. Deploy and wait ~2–3 minutes
 
-### 2. Szukaj adresu
+### 2. Search
 
-Po SSH / terminalu w Brev:
+SSH / terminal on the instance:
 
 ```bash
 cd /home/ubuntu/workspace/eth-vanity-brev
-./scripts/run.sh dead          # prefix bez 0x
+./scripts/run.sh dead          # prefix without 0x
 ./scripts/run.sh cafe beef     # prefix + suffix
 WORK_SCALE=17 ./scripts/run.sh aabb
 ```
 
-Wyniki (z kluczami prywatnymi) lecą do `results/` — **nie commituj, nie wrzucaj na Discord**.
+Hits (with private keys) go to `results/` — **do not commit or share**.
 
-### 3. CLI Brev (opcjonalnie)
+### 3. Brev CLI (optional)
 
 ```bash
 brev start https://github.com/rheiCEO/eth-vanity-brev.git \
   --setup-script https://raw.githubusercontent.com/rheiCEO/eth-vanity-brev/main/brev-setup.sh
 ```
 
-Auto-start szukania przy provision:
+Auto-start search on provision: set env `PREFIX=dead AUTO_RUN=1`.
 
-```bash
-# Launch Parameter / env: PREFIX=dead AUTO_RUN=1
-```
-
-## Lokalnie (Linux + CUDA)
+## Local Linux + CUDA
 
 ```bash
 ./scripts/build.sh
 ./scripts/run.sh <prefix> [suffix]
 ```
 
-Zmienne: `DEVICE` (domyślnie 0), `WORK_SCALE` (domyślnie 16), `CUDA_ARCH` (domyślnie `-arch=native`).
+Env: `DEVICE` (default 0), `WORK_SCALE` (default 16), `CUDA_ARCH` (default `-arch=native`).
 
-## Windows (Twój ethV2.03)
+## Windows (ethV2.03)
 
-Lokalny stack Synapse zostaje jak był (`SKOMPILUJ.bat` / `SZUKAJ.bat`).  
-Na Brev używasz **tego** repo (binarka Linux), nie `synapse.exe`.
+Keep using `SKOMPILUJ.bat` / `SZUKAJ.bat` / `synapse.exe` locally.  
+On Brev use **this** repo (Linux binary), not `synapse.exe`.
 
-## Wydajność
+## Performance (ballpark)
 
-| GPU (orientacyjnie) | M/s |
-|---------------------|-----|
-| RTX 3070            | ~1000 |
-| RTX 3090            | ~1600 |
-| RTX 4090            | ~3800 |
-| L40S (Brev)         | zwykle bardzo wysoko — stroj `WORK_SCALE` 15–17 |
+| GPU        | M/s   |
+|------------|-------|
+| RTX 3070   | ~1000 |
+| RTX 3090   | ~1600 |
+| RTX 4090   | ~3800 |
+| L40S       | tune `WORK_SCALE` 15–17 |
 
-Init krzywej ECC może zająć kilka minut przy wysokim `work-scale`, potem leci throughput.
+ECC curve init can take a few minutes at high work-scale, then throughput ramps up.
 
-## Bezpieczeństwo
+## Security
 
-- Klucz prywatny = pełna kontrola nad ETH. Trzymaj `results/` lokalnie / szyfruj.
-- Nie wrzucaj logów z kluczami do Gita.
-- Prefiks dłuższy = znacznie dłuższy czas (każdy hex znak ×16 trudności).
+- Private key = full control of funds. Keep `results/` private.
+- Longer prefix = much longer search (each hex char ~×16 harder).
 
-## Licencja
+## License
 
-AGPL-3.0 — zobacz [LICENSE](LICENSE). Upstream: manuelinfosec/eth-vanity-cuda.
+AGPL-3.0 — see [LICENSE](LICENSE). Upstream: manuelinfosec/eth-vanity-cuda.

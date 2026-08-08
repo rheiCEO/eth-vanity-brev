@@ -1,5 +1,5 @@
 #!/bin/bash
-# Wklej CAŁY ten plik w Brev → Configure → Run a Setup Script → Paste Script
+# Paste this ENTIRE file into Brev -> Configure -> Run a Setup Script -> Paste Script
 set -euo pipefail
 cd /home/ubuntu/workspace
 if [[ ! -d eth-vanity-brev/.git ]]; then
