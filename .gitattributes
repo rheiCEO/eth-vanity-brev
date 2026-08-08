@@ -1,0 +1,6 @@
+*.sh text eol=lf
+brev-setup.sh text eol=lf
+brev-paste.sh text eol=lf
+*.cu text
+*.h text
+*.md text
