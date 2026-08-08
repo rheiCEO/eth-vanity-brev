@@ -4,3 +4,5 @@ brev-paste.sh text eol=lf
 *.cu text
 *.h text
 *.md text
+
+vast-setup.sh text eol=lf

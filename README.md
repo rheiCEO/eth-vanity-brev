@@ -46,6 +46,30 @@ brev start https://github.com/rheiCEO/eth-vanity-brev.git \
 
 Auto-start search on provision: set env `PREFIX=dead AUTO_RUN=1`.
 
+## vast.ai — same binary, different UI
+
+Tak — **ten sam kod** (`scripts/build.sh` / `run.sh`). Vast nie ma pola „Setup Script” jak Brev; zwykle: wynajmij GPU → SSH → jedna komenda.
+
+### 1. Wynajmij instancję
+1. https://cloud.vast.ai/ — wybierz ofertę (4090 / 3090 / L40S itd.)
+2. Template: **CUDA devel** (musi być `nvcc`), np.:
+   - `nvidia/cuda:12.4.1-devel-ubuntu22.04`
+   - albo `vastai/base-image` z tagiem **cuda-*-devel**
+3. Launch: **SSH** (Jupyter niepotrzebny)
+4. Disk: ≥16 GB
+
+**Uwaga:** image *runtime* / sam PyTorch bez toolkit często **nie ma nvcc** — wtedy build padnie.
+
+### 2. Po SSH
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rheiCEO/eth-vanity-brev/main/vast-setup.sh | bash
+cd /workspace/eth-vanity-brev   # albo /root/eth-vanity-brev
+./scripts/run.sh TWOJ_PREFIX
+```
+
+Opcjonalnie on-start / `PROVISIONING_SCRIPT` = URL do `vast-setup.sh`, plus env `PREFIX=dead AUTO_RUN=1`.
+
 ## Local Linux + CUDA
 
 ```bash
