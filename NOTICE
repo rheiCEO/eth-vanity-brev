@@ -1,0 +1,6 @@
+This repository packages [manuelinfosec/eth-vanity-cuda](https://github.com/manuelinfosec/eth-vanity-cuda)
+for deployment on NVIDIA Brev, with Linux build/run scripts.
+
+Upstream copyright and AGPL-3.0 terms apply to the CUDA sources under `src/`.
+Deployment scripts under `scripts/` and `brev-setup.sh` are provided for convenience
+with the same project.

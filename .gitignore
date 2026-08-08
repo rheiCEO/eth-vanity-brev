@@ -1,0 +1,22 @@
+# Build artifacts
+eth-vanity
+eth-vanity.exe
+*.o
+*.obj
+*.exp
+*.lib
+*.pdb
+*.bin
+
+# Found keys — NEVER commit
+results/
+vanity_*.txt
+*.key
+found*.txt
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
