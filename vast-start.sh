@@ -44,14 +44,18 @@ echo "  work_scale=$WORK_SCALE"
 echo "  log=$LOG"
 echo "============================================"
 
-# Dashboard (jesli juz dziala — pomin)
-if ! pgrep -f "watch_eth.py" >/dev/null 2>&1; then
-  echo "==> Dashboard HTML port $WATCH_PORT"
-  nohup python3 "$ROOT/watch_eth.py" --bind 0.0.0.0 --port "$WATCH_PORT" --no-browser \
-    > "$ROOT/results/watch.log" 2>&1 &
-  sleep 1
+# Dashboard — zawsze odswiez (kill stary)
+pkill -f "watch_eth.py" 2>/dev/null || true
+sleep 1
+echo "==> Dashboard HTML port $WATCH_PORT"
+nohup python3 "$ROOT/watch_eth.py" --bind 0.0.0.0 --port "$WATCH_PORT" --no-browser \
+  > "$ROOT/results/watch.log" 2>&1 &
+sleep 2
+if curl -sf "http://127.0.0.1:${WATCH_PORT}/health" >/dev/null; then
+  echo "==> Dashboard OK: http://127.0.0.1:${WATCH_PORT}/"
 else
-  echo "==> Dashboard juz dziala"
+  echo "==> UWAGA: dashboard nie odpowiada — sprawdz results/watch.log"
+  tail -20 "$ROOT/results/watch.log" 2>/dev/null || true
 fi
 
 # Stop poprzedniego szukania

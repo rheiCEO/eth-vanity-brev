@@ -42,13 +42,18 @@ def latest_log() -> Path | None:
     return None
 
 
+def normalize_log(text: str) -> str:
+    """eth-vanity uzywa \\r — zamien na linie zeby regex lapal Total:"""
+    return text.replace("\r", "\n")
+
+
 def tail_text(path: Path, max_bytes: int = 256_000) -> str:
     if not path.is_file():
         return ""
     data = path.read_bytes()
     if len(data) > max_bytes:
         data = data[-max_bytes:]
-    return data.decode("utf-8", errors="replace")
+    return normalize_log(data.decode("utf-8", errors="replace"))
 
 
 def parse_log(text: str) -> dict:
@@ -133,11 +138,27 @@ def ensure_found_zip(found: dict, log_path: Path | None) -> Path | None:
         return None
 
 
+def search_running() -> bool:
+    pid = RESULTS / "search.pid"
+    if pid.is_file():
+        try:
+            subprocess.run(["kill", "-0", pid.read_text().strip()], check=True, capture_output=True)
+            return True
+        except (subprocess.CalledProcessError, ValueError, OSError):
+            pass
+    try:
+        r = subprocess.run(["pgrep", "-f", str(ROOT / "eth-vanity")], capture_output=True)
+        return r.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
 def collect() -> dict:
     log_path = latest_log()
     text = tail_text(log_path) if log_path else ""
     parsed = parse_log(text)
     age = int(max(0, time.time() - log_path.stat().st_mtime)) if log_path else None
+    watch_log = tail_text(RESULTS / "watch.log", 8000) if (RESULTS / "watch.log").is_file() else ""
 
     zip_path = None
     if parsed.get("found"):
@@ -145,8 +166,17 @@ def collect() -> dict:
         if z:
             zip_path = str(z)
 
+    phase = "idle"
+    if parsed.get("found"):
+        phase = "found"
+    elif parsed.get("speed_total_m"):
+        phase = "searching"
+    elif search_running() or parsed.get("running"):
+        phase = "init" if not parsed.get("speed_total_m") else "searching"
+
     return {
         "ok": True,
+        "phase": phase,
         "log_file": str(log_path) if log_path else None,
         "log_age_sec": age,
         "prefix": parsed.get("prefix"),
@@ -154,11 +184,18 @@ def collect() -> dict:
         "speed_total": (parsed.get("speed_total_m") or 0) * 1_000_000,
         "devices": parsed.get("devices") or [],
         "device_count": len(parsed.get("devices") or []),
-        "running": parsed.get("running"),
+        "running": parsed.get("running") or search_running(),
+        "search_running": search_running(),
         "found": parsed.get("found"),
         "found_zip": zip_path,
         "zip_password_hint": "1234567890",
         "log_tail": text[-4000:] if text else "",
+        "watch_log": watch_log[-2000:],
+        "hint": (
+            "Inicjalizacja krzywej ~2-4 min — poczekaj, potem pojawi sie M/s"
+            if phase == "init"
+            else None
+        ),
     }
 
 
@@ -182,6 +219,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html", "/dashboard_eth.html"):
             self._send(200, HTML.read_bytes(), "text/html; charset=utf-8")
+        elif path == "/health":
+            self._send(200, b"ok", "text/plain")
         elif path == "/api":
             self._send(200, json.dumps(collect()).encode("utf-8"))
         elif path in ("/download/found.zip", "/found.zip"):

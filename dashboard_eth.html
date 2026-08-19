@@ -72,7 +72,10 @@
     <div class="live"><div class="dot off" id="dot"></div><span id="live">łączenie…</span></div>
   </div>
 
-  <div id="empty" class="wait">Czekam na log z GPU…<br><code>bash vast-start.sh</code></div>
+  <div id="empty" class="wait">
+    <p id="emptyMsg">Łączenie z serwerem…</p>
+    <p class="sub" style="margin-top:12px">Tunel vast: <code>http://localhost:8768</code> (NIE Jupyter 8888)</p>
+  </div>
 
   <div id="app" hidden>
     <div class="hero">
@@ -85,6 +88,7 @@
         <div class="card"><label>Log</label><b id="ago">—</b></div>
       </div>
       <div class="gpu-grid" id="gpuGrid"></div>
+      <p class="sub" id="hint" style="margin-top:12px;display:none"></p>
     </div>
 
     <div class="found-box" id="foundBox">
@@ -95,8 +99,10 @@
       <div class="sub" style="margin-top:10px">Hasło ZIP: <b style="color:var(--gold)">1234567890</b></div>
     </div>
 
-    <div class="log-title">Ostatnie linie logu</div>
-    <pre id="logTail"></pre>
+    <div class="log-title">Ostatnie linie logu GPU</div>
+    <pre id="logTail">(brak)</pre>
+    <div class="log-title">Serwer watch (diagnoza)</div>
+    <pre id="watchLog">(brak)</pre>
   </div>
 </div>
 <script>
@@ -107,20 +113,25 @@ function fmt(n) {
 }
 
 async function tick() {
+  const live = document.getElementById("live");
+  const dot = document.getElementById("dot");
+  const empty = document.getElementById("empty");
+  const app = document.getElementById("app");
   try {
     const r = await fetch("/api?" + Date.now());
+    if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
-    const live = document.getElementById("live");
-    const dot = document.getElementById("dot");
 
-    if (!d.log_file) {
-      live.textContent = "brak logu — uruchom vast-start.sh";
-      dot.className = "dot off";
-      return;
+    empty.hidden = true;
+    app.hidden = false;
+
+    if (!d.log_file && !d.log_tail) {
+      document.getElementById("emptyMsg").textContent =
+        d.search_running
+          ? "Szukanie startuje — log jeszcze pusty…"
+          : "Brak logu — na vast: bash vast-start.sh";
+      empty.hidden = false;
     }
-
-    document.getElementById("empty").hidden = true;
-    document.getElementById("app").hidden = false;
 
     if (d.found) {
       live.textContent = "ZNALEZIONO!";
@@ -128,20 +139,35 @@ async function tick() {
       document.getElementById("foundBox").classList.add("on");
       document.getElementById("foundAddr").textContent = "Adres: " + d.found.address;
       document.getElementById("foundKey").textContent = "Klucz:  " + d.found.private_key;
+    } else if (d.phase === "init") {
+      live.textContent = "init krzywej GPU (2–4 min)…";
+      dot.className = "dot";
     } else if (d.running || d.speed_total_m) {
       live.textContent = "szuka na GPU…";
+      dot.className = "dot";
+    } else if (d.search_running) {
+      live.textContent = "proces dziala…";
       dot.className = "dot";
     } else {
       live.textContent = "idle";
       dot.className = "dot off";
     }
 
+    const hint = document.getElementById("hint");
+    if (d.hint) {
+      hint.textContent = d.hint;
+      hint.style.display = "block";
+    } else {
+      hint.style.display = "none";
+    }
+
     const spd = d.speed_total || 0;
-    document.getElementById("speed").innerHTML = fmt(spd) + "<small> kluczy/s</small>";
-    document.getElementById("mps").textContent = (d.speed_total_m || 0).toFixed(2) + " M/s";
+    document.getElementById("speed").innerHTML =
+      d.speed_total_m ? fmt(spd) + "<small> kluczy/s</small>" : "—<small> czekam na M/s</small>";
+    document.getElementById("mps").textContent = d.speed_total_m ? d.speed_total_m.toFixed(2) + " M/s" : "—";
     document.getElementById("prefix").textContent = d.prefix || "—";
-    document.getElementById("gpus").textContent = d.device_count || "—";
-    document.getElementById("ago").textContent = (d.log_age_sec ?? "—") + " s temu";
+    document.getElementById("gpus").textContent = d.device_count || (d.search_running ? "?" : "—");
+    document.getElementById("ago").textContent = d.log_age_sec != null ? d.log_age_sec + " s temu" : "—";
 
     const pct = Math.min(100, Math.log10(spd + 1) / Math.log10(4e9) * 100);
     document.getElementById("fill").style.width = Math.max(2, pct) + "%";
@@ -155,10 +181,15 @@ async function tick() {
       grid.appendChild(el);
     });
 
-    document.getElementById("logTail").textContent = d.log_tail || "";
+    document.getElementById("logTail").textContent = d.log_tail || "(log pusty — tail -f results/active.log)";
+    document.getElementById("watchLog").textContent = d.watch_log || "(ok)";
   } catch (e) {
-    document.getElementById("live").textContent = "serwer nie odpowiada";
-    document.getElementById("dot").className = "dot off";
+    empty.hidden = false;
+    app.hidden = true;
+    document.getElementById("emptyMsg").textContent =
+      "Serwer nie odpowiada na porcie 8768. Na vast: cd /workspace/eth-vanity-brev && bash vast-start.sh";
+    live.textContent = "brak polaczenia";
+    dot.className = "dot off";
   }
 }
 tick();
