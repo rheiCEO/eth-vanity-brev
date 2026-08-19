@@ -60,15 +60,21 @@ Tak — **ten sam kod** (`scripts/build.sh` / `run.sh`). Vast nie ma pola „Set
 
 **Uwaga:** image *runtime* / sam PyTorch bez toolkit często **nie ma nvcc** — wtedy build padnie.
 
-### 2. Po SSH
+### 2. Po SSH (setup + dashboard HTML)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rheiCEO/eth-vanity-brev/main/vast-setup.sh | bash
 cd /workspace/eth-vanity-brev   # albo /root/eth-vanity-brev
-./scripts/run.sh TWOJ_PREFIX
+PREFIX=dead bash vast-start.sh
 ```
 
-Opcjonalnie on-start / `PROVISIONING_SCRIPT` = URL do `vast-setup.sh`, plus env `PREFIX=dead AUTO_RUN=1`.
+`vast-start.sh` uruchamia **wszystkie GPU** + panel HTML na porcie **8768**.
+
+**Tunel vast:** Instance Portal → Tunnels → `http://localhost:8768`
+
+**Po trafieniu:** `http://localhost:8768/download/found.zip` — hasło ZIP: `1234567890`
+
+On-start script (wklej w vast): [`vast-paste.sh`](vast-paste.sh)
 
 ## Local Linux + CUDA
 
