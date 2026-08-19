@@ -35,7 +35,7 @@ export DEBIAN_FRONTEND=noninteractive
 if command -v apt-get >/dev/null 2>&1; then
   if command -v sudo >/dev/null 2>&1 && [[ "$(id -u)" -ne 0 ]]; then
     sudo apt-get update -y
-    sudo apt-get install -y build-essential git ca-certificates coreutils
+    sudo apt-get install -y build-essential git ca-certificates coreutils python3 zip
   else
     apt-get update -y
     apt-get install -y build-essential git ca-certificates coreutils python3 zip
