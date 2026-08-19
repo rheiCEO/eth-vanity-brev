@@ -222,7 +222,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/health":
             self._send(200, b"ok", "text/plain")
         elif path == "/api":
-            self._send(200, json.dumps(collect()).encode("utf-8"))
+            try:
+                body = json.dumps(collect(), ensure_ascii=False).encode("utf-8")
+            except Exception as e:
+                body = json.dumps({"ok": False, "error": str(e)}).encode("utf-8")
+            self._send(200, body, "application/json; charset=utf-8")
         elif path in ("/download/found.zip", "/found.zip"):
             data = collect()
             found = data.get("found")
