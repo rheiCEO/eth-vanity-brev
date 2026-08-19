@@ -69,9 +69,13 @@ def parse_log(text: str) -> dict:
     if m:
         out["prefix"] = m.group(1)
 
-    speeds = DEVICE_SPEED_RE.findall(text)
-    if speeds:
-        out["devices"] = [{"id": int(d), "speed_m": float(s)} for d, s in speeds]
+    # Log ma setki linii "DEVICE 0: X M/s" — bierz tylko OSTATNIA wartosc na karte
+    by_gpu: dict[int, float] = {}
+    for dev_id, spd in DEVICE_SPEED_RE.findall(text):
+        by_gpu[int(dev_id)] = float(spd)
+    if by_gpu:
+        out["devices"] = [{"id": i, "speed_m": by_gpu[i]} for i in sorted(by_gpu)]
+
     sm = SPEED_RE.findall(text)
     if sm:
         out["speed_total_m"] = float(sm[-1])
@@ -82,7 +86,7 @@ def parse_log(text: str) -> dict:
     if hits:
         pk, addr = hits[-1]
         out["found"] = {"private_key": pk, "address": addr}
-    out["hits_count"] = len(hits)
+    out["hits_count"] = 1 if hits else 0
 
     low = text.lower()
     out["running"] = "total:" in low and out["found"] is None
