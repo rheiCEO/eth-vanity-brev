@@ -186,9 +186,15 @@ async function tick() {
   } catch (e) {
     empty.hidden = false;
     app.hidden = true;
-    document.getElementById("emptyMsg").textContent =
-      "Serwer nie odpowiada na porcie 8768. Na vast: cd /workspace/eth-vanity-brev && bash vast-start.sh";
-    live.textContent = "brak polaczenia";
+    document.getElementById("emptyMsg").innerHTML =
+      "API nie odpowiada przez tunel.<br><br>" +
+      "<b>Na vast (SSH):</b><br>" +
+      "<code>curl -s http://127.0.0.1:8768/api | head -c 80</code><br><br>" +
+      "<b>Cloudflare:</b> tunel musi iść na port <b>8768</b>:<br>" +
+      "<code>cloudflared tunnel --url http://127.0.0.1:8768</code><br><br>" +
+      "Albo użyj tunelu vast: <code>http://localhost:8768</code> (nie Jupyter 8888)<br><br>" +
+      "<small>Błąd: " + (e.message || e) + "</small>";
+    live.textContent = "brak API";
     dot.className = "dot off";
   }
 }
