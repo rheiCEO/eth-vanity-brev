@@ -28,6 +28,7 @@ PREFIX_RE = re.compile(r"\[DEBUG\]\s+Input prefix:\s+(\S+)", re.IGNORECASE)
 
 _lock = threading.Lock()
 _found_zip: Path | None = None
+_COUNTER_FILE = RESULTS / "keys_counter.json"
 
 
 def latest_log() -> Path | None:
@@ -81,6 +82,7 @@ def parse_log(text: str) -> dict:
     if hits:
         pk, addr = hits[-1]
         out["found"] = {"private_key": pk, "address": addr}
+    out["hits_count"] = len(hits)
 
     low = text.lower()
     out["running"] = "total:" in low and out["found"] is None
@@ -153,6 +155,70 @@ def search_running() -> bool:
         return False
 
 
+def search_started_at() -> float | None:
+    pid = RESULTS / "search.pid"
+    if pid.is_file():
+        try:
+            return pid.stat().st_mtime
+        except OSError:
+            pass
+    log = latest_log()
+    if log and log.is_file():
+        try:
+            return log.stat().st_mtime
+        except OSError:
+            pass
+    return None
+
+
+def update_keys_counter(speed_m: float | None, hits: int) -> dict:
+    """Suma przeszukanych kluczy — estymata z M/s * czas (eth-vanity nie loguje total)."""
+    now = time.time()
+    with _lock:
+        data: dict = {"total_keys": 0, "last_ts": now, "last_speed_m": 0.0, "started_at": now}
+        if _COUNTER_FILE.is_file():
+            try:
+                data.update(json.loads(_COUNTER_FILE.read_text(encoding="utf-8")))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        started = search_started_at()
+        if started and (now - float(data.get("started_at", started))) > 300 and not search_running():
+            data["started_at"] = started
+            data["total_keys"] = 0
+
+        if not search_running() and not speed_m:
+            return {
+                "total_keys": int(data.get("total_keys", 0)),
+                "hits_count": hits,
+                "elapsed_sec": int(now - float(data.get("started_at", now))),
+            }
+
+        last_ts = float(data.get("last_ts") or now)
+        last_speed = float(data.get("last_speed_m") or 0.0)
+        dt = now - last_ts
+        if speed_m and 0 < dt < 180:
+            data["total_keys"] = int(data.get("total_keys", 0)) + int(speed_m * 1_000_000 * dt)
+        elif speed_m and data.get("total_keys", 0) == 0 and dt < 600:
+            data["total_keys"] = int(speed_m * 1_000_000 * max(0, now - float(data.get("started_at", now))))
+
+        data["last_ts"] = now
+        data["last_speed_m"] = float(speed_m or last_speed)
+        if started:
+            data["started_at"] = float(data.get("started_at") or started)
+
+        try:
+            _COUNTER_FILE.write_text(json.dumps(data), encoding="utf-8")
+        except OSError:
+            pass
+
+        return {
+            "total_keys": int(data.get("total_keys", 0)),
+            "hits_count": hits,
+            "elapsed_sec": int(now - float(data.get("started_at", now))),
+        }
+
+
 def collect() -> dict:
     log_path = latest_log()
     text = tail_text(log_path) if log_path else ""
@@ -174,6 +240,8 @@ def collect() -> dict:
     elif search_running() or parsed.get("running"):
         phase = "init" if not parsed.get("speed_total_m") else "searching"
 
+    stats = update_keys_counter(parsed.get("speed_total_m"), int(parsed.get("hits_count") or 0))
+
     return {
         "ok": True,
         "phase": phase,
@@ -182,6 +250,9 @@ def collect() -> dict:
         "prefix": parsed.get("prefix"),
         "speed_total_m": parsed.get("speed_total_m"),
         "speed_total": (parsed.get("speed_total_m") or 0) * 1_000_000,
+        "total_keys": stats["total_keys"],
+        "hits_count": stats["hits_count"],
+        "elapsed_sec": stats["elapsed_sec"],
         "devices": parsed.get("devices") or [],
         "device_count": len(parsed.get("devices") or []),
         "running": parsed.get("running") or search_running(),

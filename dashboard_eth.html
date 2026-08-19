@@ -79,12 +79,14 @@
 
   <div id="app" hidden>
     <div class="hero">
-      <div class="speed" id="speed">—<small> kluczy/s</small></div>
+      <div class="speed" id="totalKeys">0<small> kluczy sprawdzonych</small></div>
+      <div class="sub" id="elapsed" style="margin-top:4px">—</div>
       <div class="tank"><div class="fill" id="fill"></div></div>
       <div class="cards">
+        <div class="card"><label>Prędkość</label><b id="mps">—</b></div>
+        <div class="card"><label>Trafienia (pass)</label><b id="hits">0</b></div>
         <div class="card"><label>Prefiks</label><b id="prefix" style="font-size:12px;word-break:break-all">—</b></div>
         <div class="card"><label>GPU</label><b id="gpus">—</b></div>
-        <div class="card"><label>Prędkość łączna</label><b id="mps">—</b></div>
         <div class="card"><label>Log</label><b id="ago">—</b></div>
       </div>
       <div class="gpu-grid" id="gpuGrid"></div>
@@ -162,9 +164,15 @@ async function tick() {
     }
 
     const spd = d.speed_total || 0;
-    document.getElementById("speed").innerHTML =
-      d.speed_total_m ? fmt(spd) + "<small> kluczy/s</small>" : "—<small> czekam na M/s</small>";
+    document.getElementById("totalKeys").innerHTML =
+      fmt(d.total_keys || 0) + "<small> kluczy sprawdzonych</small>";
+    const elSec = d.elapsed_sec || 0;
+    const elH = Math.floor(elSec / 3600), elM = Math.floor((elSec % 3600) / 60);
+    document.getElementById("elapsed").textContent =
+      "Czas: " + (elH ? elH + " h " : "") + elM + " min · ~" + fmt(spd) + "/s";
     document.getElementById("mps").textContent = d.speed_total_m ? d.speed_total_m.toFixed(2) + " M/s" : "—";
+    document.getElementById("hits").textContent = String(d.hits_count ?? 0);
+    document.getElementById("hits").style.color = (d.hits_count > 0) ? "var(--gold)" : "";
     document.getElementById("prefix").textContent = d.prefix || "—";
     document.getElementById("gpus").textContent = d.device_count || (d.search_running ? "?" : "—");
     document.getElementById("ago").textContent = d.log_age_sec != null ? d.log_age_sec + " s temu" : "—";

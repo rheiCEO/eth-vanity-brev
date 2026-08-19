@@ -61,6 +61,7 @@ fi
 # Stop poprzedniego szukania
 pkill -f "$ROOT/eth-vanity" 2>/dev/null || true
 sleep 1
+rm -f "$ROOT/results/keys_counter.json"
 
 echo "==> Szukanie w tle..."
 nohup stdbuf -oL -eL "$BIN" \
