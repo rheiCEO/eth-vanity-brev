@@ -15,6 +15,8 @@ vanity_*.txt
 found*.txt
 
 # Editor / OS
+__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db
 .vscode/

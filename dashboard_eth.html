@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vanity ETH — vast.ai</title>
+<style>
+  :root {
+    --bg: #07080c; --card: #12141c; --line: #1e2330;
+    --text: #e8edf7; --muted: #8b93a7; --gold: #f5b942;
+    --cyan: #3ee0c6; --green: #5ee9a0; --red: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100%; font-family: "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    background: radial-gradient(900px 400px at 0% 0%, #1a1030 0%, transparent 50%), var(--bg);
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 28px 18px 48px; }
+  h1 { margin: 0; font-size: 26px; }
+  h1 span { color: var(--gold); }
+  .sub { color: var(--muted); margin-top: 6px; font-size: 14px; }
+  .live { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--green); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.4s infinite; }
+  .dot.off { background: #666; box-shadow: none; animation: none; }
+  .dot.hit { background: var(--gold); box-shadow: 0 0 14px var(--gold); animation: none; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .hero {
+    margin-top: 20px; padding: 22px; border-radius: 20px;
+    background: linear-gradient(180deg, #161922, #10131a);
+    border: 1px solid var(--line);
+  }
+  .speed { font-size: clamp(36px, 8vw, 56px); font-weight: 800; }
+  .speed small { font-size: 16px; color: var(--muted); font-weight: 600; }
+  .tank { margin-top: 16px; height: 14px; background: #0b0d12; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, #2a8f7a, var(--cyan)); transition: width .8s; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .card label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+  .card b { font-size: 16px; }
+  .gpu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
+  .gpu { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+  .gpu b { color: var(--cyan); }
+  .found-box {
+    margin-top: 18px; padding: 18px; border-radius: 16px;
+    border: 2px solid var(--gold); background: #1a1508;
+    display: none;
+  }
+  .found-box.on { display: block; }
+  .found-box h2 { margin: 0 0 10px; color: var(--gold); font-size: 18px; }
+  .mono { font-family: Consolas, ui-monospace, monospace; font-size: 12px; word-break: break-all; color: #c9d3e7; }
+  .dl {
+    display: inline-block; margin-top: 12px; padding: 12px 18px;
+    background: #1a2430; border: 1px solid var(--gold); color: var(--gold);
+    text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 14px;
+  }
+  .log-title { margin: 24px 0 8px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  pre {
+    background: #0b0d12; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; font-size: 11px; overflow: auto; max-height: 220px; color: #aeb8cc;
+  }
+  .wait { color: var(--muted); text-align: center; padding: 30px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:flex-end">
+    <div>
+      <h1>Vanity <span>ETH</span> — vast.ai</h1>
+      <div class="sub">Podgląd szukania · ZIP z kluczem po trafieniu</div>
+    </div>
+    <div class="live"><div class="dot off" id="dot"></div><span id="live">łączenie…</span></div>
+  </div>
+
+  <div id="empty" class="wait">Czekam na log z GPU…<br><code>bash vast-start.sh</code></div>
+
+  <div id="app" hidden>
+    <div class="hero">
+      <div class="speed" id="speed">—<small> kluczy/s</small></div>
+      <div class="tank"><div class="fill" id="fill"></div></div>
+      <div class="cards">
+        <div class="card"><label>Prefiks</label><b id="prefix" style="font-size:12px;word-break:break-all">—</b></div>
+        <div class="card"><label>GPU</label><b id="gpus">—</b></div>
+        <div class="card"><label>Prędkość łączna</label><b id="mps">—</b></div>
+        <div class="card"><label>Log</label><b id="ago">—</b></div>
+      </div>
+      <div class="gpu-grid" id="gpuGrid"></div>
+    </div>
+
+    <div class="found-box" id="foundBox">
+      <h2>*** ZNALEZIONO ***</h2>
+      <div class="mono" id="foundAddr"></div>
+      <div class="mono" id="foundKey" style="margin-top:8px"></div>
+      <a class="dl" href="/download/found.zip" id="dlZip">Pobierz found.zip</a>
+      <div class="sub" style="margin-top:10px">Hasło ZIP: <b style="color:var(--gold)">1234567890</b></div>
+    </div>
+
+    <div class="log-title">Ostatnie linie logu</div>
+    <pre id="logTail"></pre>
+  </div>
+</div>
+<script>
+function fmt(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(2) + " mld";
+  if (n >= 1e6) return (n/1e6).toFixed(1) + " mln";
+  return n.toLocaleString("pl-PL");
+}
+
+async function tick() {
+  try {
+    const r = await fetch("/api?" + Date.now());
+    const d = await r.json();
+    const live = document.getElementById("live");
+    const dot = document.getElementById("dot");
+
+    if (!d.log_file) {
+      live.textContent = "brak logu — uruchom vast-start.sh";
+      dot.className = "dot off";
+      return;
+    }
+
+    document.getElementById("empty").hidden = true;
+    document.getElementById("app").hidden = false;
+
+    if (d.found) {
+      live.textContent = "ZNALEZIONO!";
+      dot.className = "dot hit";
+      document.getElementById("foundBox").classList.add("on");
+      document.getElementById("foundAddr").textContent = "Adres: " + d.found.address;
+      document.getElementById("foundKey").textContent = "Klucz:  " + d.found.private_key;
+    } else if (d.running || d.speed_total_m) {
+      live.textContent = "szuka na GPU…";
+      dot.className = "dot";
+    } else {
+      live.textContent = "idle";
+      dot.className = "dot off";
+    }
+
+    const spd = d.speed_total || 0;
+    document.getElementById("speed").innerHTML = fmt(spd) + "<small> kluczy/s</small>";
+    document.getElementById("mps").textContent = (d.speed_total_m || 0).toFixed(2) + " M/s";
+    document.getElementById("prefix").textContent = d.prefix || "—";
+    document.getElementById("gpus").textContent = d.device_count || "—";
+    document.getElementById("ago").textContent = (d.log_age_sec ?? "—") + " s temu";
+
+    const pct = Math.min(100, Math.log10(spd + 1) / Math.log10(4e9) * 100);
+    document.getElementById("fill").style.width = Math.max(2, pct) + "%";
+
+    const grid = document.getElementById("gpuGrid");
+    grid.innerHTML = "";
+    (d.devices || []).forEach(g => {
+      const el = document.createElement("div");
+      el.className = "gpu";
+      el.innerHTML = `<b>GPU ${g.id}</b> · ${g.speed_m.toFixed(2)} M/s`;
+      grid.appendChild(el);
+    });
+
+    document.getElementById("logTail").textContent = d.log_tail || "";
+  } catch (e) {
+    document.getElementById("live").textContent = "serwer nie odpowiada";
+    document.getElementById("dot").className = "dot off";
+  }
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

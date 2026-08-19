@@ -38,7 +38,7 @@ if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get install -y build-essential git ca-certificates coreutils
   else
     apt-get update -y
-    apt-get install -y build-essential git ca-certificates coreutils
+    apt-get install -y build-essential git ca-certificates coreutils python3 zip
   fi
 fi
 
@@ -72,13 +72,16 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader ||
 cat <<EOF
 
 --------------------------------------------
-Ready. Search:
+Ready. Search + dashboard:
 
   cd $ROOT
-  ./scripts/run.sh YOUR_PREFIX
+  PREFIX=dead bash vast-start.sh
 
-Example: ./scripts/run.sh dead
-Keys go to: $ROOT/results/  (keep private)
+Dashboard (tunel vast port 8768):
+  python3 watch_eth.py --bind 0.0.0.0 --port 8768 --no-browser
+
+Po trafieniu: /download/found.zip  haslo: 1234567890
+Keys/logs: $ROOT/results/  (keep private)
 --------------------------------------------
 EOF
 
